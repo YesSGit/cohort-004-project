@@ -113,6 +113,7 @@ export const enrollments = sqliteTable("enrollments", {
   enrolledAt: text("enrolled_at")
     .notNull()
     .$defaultFn(() => new Date().toISOString()),
+  gradeScore: real("grade_score").default(0.0),
   completedAt: text("completed_at"),
 });
 
