@@ -4,6 +4,7 @@ import * as schema from "./schema";
 
 const sqlite = new Database("data.db");
 sqlite.pragma("journal_mode = WAL");
+sqlite.pragma("wal_autocheckpoint = 1");
 sqlite.pragma("foreign_keys = ON");
 
 export const db = drizzle(sqlite, { schema });
