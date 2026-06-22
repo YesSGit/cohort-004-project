@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState, useOptimistic, useTransition } from "react";
 import { Link, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import type { Route } from "./+types/courses.$slug";
@@ -42,6 +42,8 @@ import { formatDuration, formatPrice } from "~/lib/utils";
 import { renderMarkdown } from "~/lib/markdown.server";
 import { resolveCountry } from "~/lib/country.server";
 import { calculatePppPrice, getCountryTierInfo } from "~/lib/ppp";
+import { getUserRatingForCourse } from "~/services/reviewService";
+import { StarRatingDisplay, StarRatingInput } from "~/components/star-rating";
 
 export function meta({ data: loaderData }: Route.MetaArgs) {
   const title = loaderData?.course?.title ?? "Course";
@@ -102,6 +104,11 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     : courseWithDetails.price;
   const tierInfo = getCountryTierInfo(country);
 
+  const userRating =
+    currentUserId && enrolled
+      ? getUserRatingForCourse(currentUserId, course.id)
+      : null;
+
   return {
     course: courseWithDetails,
     salesCopyHtml,
@@ -113,6 +120,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     currentUserId,
     pppPrice,
     tierInfo,
+    userRating,
   };
 }
 
@@ -181,9 +189,23 @@ export default function CourseDetail({ loaderData }: Route.ComponentProps) {
     currentUserId,
     pppPrice,
     tierInfo,
+    userRating,
   } = loaderData;
   const isInstructor = currentUserId === course.instructorId;
   const [searchParams, setSearchParams] = useSearchParams();
+  const [isPending, startTransition] = useTransition();
+  const [optimisticRating, setOptimisticRating] = useOptimistic(userRating);
+
+  async function handleRating(rating: number) {
+    startTransition(async () => {
+      setOptimisticRating(rating);
+      await fetch("/api/course-rating", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ courseId: course.id, rating }),
+      });
+    });
+  }
 
   useEffect(() => {
     if (searchParams.get("already_enrolled") === "1") {
@@ -301,7 +323,7 @@ export default function CourseDetail({ loaderData }: Route.ComponentProps) {
         <p className="mb-4 text-lg text-muted-foreground">
           {course.description}
         </p>
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <UserAvatar
               name={course.instructorName}
@@ -319,6 +341,12 @@ export default function CourseDetail({ loaderData }: Route.ComponentProps) {
               <Clock className="size-4" />
               {formatDuration(totalDuration, true, false, false)} total
             </span>
+          )}
+          {course.ratingAverage !== null && course.ratingCount > 0 && (
+            <StarRatingDisplay
+              average={Math.round(Number(course.ratingAverage) * 10) / 10}
+              count={course.ratingCount}
+            />
           )}
         </div>
       </div>
@@ -442,6 +470,21 @@ export default function CourseDetail({ loaderData }: Route.ComponentProps) {
                   </p>
                 )}
               </div>
+              {enrolled && !isInstructor && (
+                <div className="border-t pt-4">
+                  <p className="mb-2 text-sm font-medium">Your Rating</p>
+                  <StarRatingInput
+                    value={optimisticRating}
+                    onChange={handleRating}
+                    disabled={isPending}
+                  />
+                  {optimisticRating && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      You rated this course {optimisticRating}/5
+                    </p>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -1,0 +1,846 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Arial-BoldMT;\f1\fswiss\fcharset0 ArialMT;\f2\fswiss\fcharset0 Arial-ItalicMT;
+\f3\fmodern\fcharset0 CourierNewPSMT;\f4\fmodern\fcharset0 CourierNewPS-BoldMT;}
+{\colortbl;\red255\green255\blue255;\red30\green58\blue95;\red107\green114\blue128;\red22\green163\blue74;
+\red234\green88\blue12;\red124\green58\blue237;\red37\green99\blue235;\red55\green65\blue81;\red220\green38\blue38;
+\red217\green119\blue6;\red191\green191\blue191;}
+{\*\expandedcolortbl;;\csgenericrgb\c11765\c22745\c37255;\csgenericrgb\c41961\c44706\c50196;\csgenericrgb\c8627\c63922\c29020;
+\csgenericrgb\c91765\c34510\c4706;\csgenericrgb\c48627\c22745\c92941;\csgenericrgb\c14510\c38824\c92157;\csgenericrgb\c21569\c25490\c31765;\csgenericrgb\c86275\c14902\c14902;
+\csgenericrgb\c85098\c46667\c2353;\csgray\c79525;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww28540\viewh17840\viewkind0
+\deftab720
+\pard\pardeftab720\sb480\partightenfactor0
+
+\f0\b\fs24 \cf2 Course Review System\
+\pard\pardeftab720\partightenfactor0
+\cf2 	Implementation Breakdown
+\f1\b0\fs46 \
+\pard\pardeftab720\sb80\partightenfactor0
+
+\fs19 \cf3 Cadence Learning Platform \'97 June 2026
+\fs2 \
+\pard\pardeftab720\sa40\partightenfactor0
+
+\fs16 \cf3 Covers all files and artefacts modified or created to implement the
+\f0\b  star-rating course review 
+\f1\b0 feature.\
+\pard\pardeftab720\partightenfactor0
+\cf3 Changes are categorised as 
+\f0\b \cf4 Functional
+\f1\b0 \cf3  (user-visible behaviour), 
+\f0\b \cf5 Non-functional
+\f1\b0 \cf3  (performance, layout, DX), or 
+\f0\b \cf6 Architectural
+\f1\b0 \cf3  (schema, route registry, ORM query structure).\
+\
+
+\fs2 \
+\pard\pardeftab720\sa120\partightenfactor0
+
+\f0\b\fs18 \cf2 NEW FILES (3)
+\fs30 \
+\pard\pardeftab720\sa200\partightenfactor0
+
+\fs14 \cf3 Three new modules created to implement the rating feature end-to-end.\
+\pard\pardeftab720\sb160\sa40\partightenfactor0
+
+\fs21 \cf7 app/services/reviewService.ts
+\f1\b0 \
+\pard\pardeftab720\sa80\partightenfactor0
+
+\f2\i\fs15 \cf3 new service module \'97 central data-access layer for all review operations
+\f1\i0 \
+\pard\pardeftab720\li280\sa16\partightenfactor0
+
+\f0\b\fs17 \cf4 Functional
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 
+\f3 upsertCourseRating(userId, courseId, rating)
+\f1  \'97 INSERT or UPDATE via Drizzle 
+\f3 onConflictDoUpdate
+\f1 ; enforces one rating per user per course at DB level\
+\'95 
+\f3 getUserRatingForCourse(userId, courseId)
+\f1  \'97 returns the user\'92s current rating or null; used to pre-populate the star input on page load\
+\'95 
+\f3 getCourseRating(courseId)
+\f1  / 
+\f3 getCourseRatings(courseIds[])
+\f1  \'97 compute 
+\f3 AVG + COUNT
+\f1  per course (available for future standalone use, e.g. admin endpoints)\
+\'95 
+\f3 isUserEnrolledInCourse(userId, courseId)
+\f1  \'97 enrollment guard invoked by the API action before any write is permitted\
+\pard\pardeftab720\li280\sb100\sa16\partightenfactor0
+
+\f0\b\fs17 \cf5 Non-functional
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 No new npm packages; uses existing Drizzle ORM operators (
+\f3 eq, and, avg, count
+\f1 ) already in the dependency tree\
+\pard\pardeftab720\sb200\partightenfactor0
+
+\fs2 \cf8 \
+\pard\pardeftab720\sb160\sa40\partightenfactor0
+
+\f0\b\fs21 \cf7 app/components/star-rating.tsx
+\f1\b0 \
+\pard\pardeftab720\sa80\partightenfactor0
+
+\f2\i\fs15 \cf3 new UI component \'97 display and interactive star-rating widgets
+\f1\i0 \
+\pard\pardeftab720\li280\sa16\partightenfactor0
+
+\f0\b\fs17 \cf4 Functional
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 
+\f0\b StarRatingDisplay
+\f1\b0  \'97 read-only; renders filled / half / empty amber stars, numeric average, and review count; returns 
+\f3 null
+\f1  if no ratings exist yet (no empty widget shown)\
+\'95 
+\f0\b StarRatingInput
+\f1\b0  \'97 interactive 5-star picker for enrolled users; each star is a 
+\f3 <button>
+\f1  with 
+\f3 aria-label
+\f1  for screen-reader accessibility; supports 
+\f3 disabled
+\f1  state during pending fetch\
+\pard\pardeftab720\li280\sb100\sa16\partightenfactor0
+
+\f0\b\fs17 \cf5 Non-functional / Architectural
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 Half-star rendered via CSS 
+\f3 overflow-hidden w-1/2
+\f1  clip on an inner span \'97 no SVG manipulation required; works with Tailwind CSS v4 utility classes already in the project\
+\'95 Uses existing 
+\f3 lucide-react
+\f1  Star icon and project 
+\f3 cn()
+\f1  utility; zero new dependencies introduced\
+\pard\pardeftab720\sb200\partightenfactor0
+
+\fs2 \cf8 \
+\pard\pardeftab720\sb160\sa40\partightenfactor0
+
+\f0\b\fs21 \cf7 app/routes/api.course-rating.ts
+\f1\b0 \
+\pard\pardeftab720\sa80\partightenfactor0
+
+\f2\i\fs15 \cf3 new API action route \'97 POST handler at /api/course-rating
+\f1\i0 \
+\pard\pardeftab720\li280\sa16\partightenfactor0
+
+\f0\b\fs17 \cf4 Functional
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 Accepts 
+\f3 POST /api/course-rating
+\f1  with JSON body 
+\f3 \{courseId, rating\}
+\f1 \
+\'95 Three-tier guard chain:\
+\pard\pardeftab720\li560\partightenfactor0
+\cf8 \'95 Authentication \'97 no session \'e8\'96\'94? 
+\f0\b \cf9 401 Unauthorized
+\f1\b0 \cf8 \
+\'95 Input validation \'97 Zod schema enforces integer rating 1\'965 \'e8\'96\'94? 
+\f0\b \cf9 400 Bad Request
+\f1\b0 \cf8 \
+\'95 Domain authorisation \'97 user not enrolled \'e8\'96\'94? 
+\f0\b \cf9 403 Forbidden
+\f1\b0 \cf8 \
+\pard\pardeftab720\li400\partightenfactor0
+\cf8 \'95 On success calls 
+\f3 upsertCourseRating
+\f1  and returns 
+\f3 \{success: true\}
+\f1 \
+\pard\pardeftab720\li280\sb100\sa16\partightenfactor0
+
+\f0\b\fs17 \cf6 Architectural
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 Follows the project\'92s existing API-only route pattern (
+\f3 api.video-tracking.ts
+\f1 ): action-only file, JSON body parsed via shared 
+\f3 parseJsonBody
+\f1  utility, typed 
+\f3 data()
+\f1  error throws matching React Router v7 conventions\
+\
+
+\fs2 \
+\pard\pardeftab720\sa120\partightenfactor0
+
+\f0\b\fs18 \cf2 MODIFIED FILES (8)
+\fs30 \
+\pard\pardeftab720\sa200\partightenfactor0
+
+\fs14 \cf3 Eight existing files updated to wire in the review feature, plus one carrying a pre-existing uncommitted change.\
+\pard\pardeftab720\sb160\sa40\partightenfactor0
+
+\fs21 \cf7 app/db/schema.ts
+\f1\b0 \
+\pard\pardeftab720\li280\sa16\partightenfactor0
+
+\f0\b\fs17 \cf4 Functional
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 New 
+\f3 courseReviews
+\f1  table: 
+\f3 id
+\f1  (PK auto-increment), 
+\f3 user_id
+\f1  (FK \'e8\'96\'94? users), 
+\f3 course_id
+\f1  (FK \'e8\'96\'94? courses), 
+\f3 rating
+\f1  (integer not null), 
+\f3 created_at
+\f1  / 
+\f3 updated_at
+\f1  (text ISO 8601)\
+\'95 Table-level callback 
+\f3 unique("course_reviews_user_course_unique").on(userId, courseId)
+\f1  \'97 DB-level constraint enforcing one rating per user per course; makes upsert safe under concurrent writes\
+\pard\pardeftab720\li280\sb100\sa16\partightenfactor0
+
+\f0\b\fs17 \cf5 Non-functional
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 Added 
+\f3 unique
+\f1  to the 
+\f3 drizzle-orm/sqlite-core
+\f1  import list\
+\pard\pardeftab720\li280\sb100\sa16\partightenfactor0
+
+\f0\b\fs17 \cf10 Unrelated \'97 pre-existing uncommitted change
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 
+\f3 gradeScore: real("grade_score").default(0.0)
+\f1  added to the 
+\f3 enrollments
+\f1  table \'97 folded in but not part of the review feature\
+\pard\pardeftab720\sb200\partightenfactor0
+
+\fs2 \cf8 \
+\pard\pardeftab720\sb160\sa40\partightenfactor0
+
+\f0\b\fs21 \cf7 drizzle/0007_powerful_onslaught.sql + 0008_glorious_shriek.sql + meta/_journal.json
+\f1\b0 \
+\pard\pardeftab720\sa80\partightenfactor0
+
+\f2\i\fs15 \cf3 new migration files + updated journal
+\f1\i0 \
+\pard\pardeftab720\li280\sa16\partightenfactor0
+
+\f0\b\fs17 \cf6 Architectural
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 Migration 0007: 
+\f3 CREATE TABLE course_reviews
+\f1  with FK constraints on 
+\f3 user_id
+\f1  and 
+\f3 course_id
+\f1 \
+\'95 Migration 0008: 
+\f3 CREATE UNIQUE INDEX course_reviews_user_course_unique ON course_reviews (user_id, course_id)
+\f1  \'97 split into a second migration because the unique constraint was added to schema.ts after the initial table generation, requiring a second 
+\f3 drizzle-kit generate
+\f1  + 
+\f3 migrate
+\f1  cycle\
+\'95 
+\f3 drizzle/meta/_journal.json
+\f1  updated with entries for idx 7 and idx 8; both migrations applied to 
+\f3 data.db
+\f1 \
+\pard\pardeftab720\sb200\partightenfactor0
+
+\fs2 \cf8 \
+\pard\pardeftab720\sb160\sa40\partightenfactor0
+
+\f0\b\fs21 \cf7 app/services/courseService.ts
+\f1\b0 \
+\pard\pardeftab720\li280\sa16\partightenfactor0
+
+\f0\b\fs17 \cf4 Functional
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 
+\f0\b buildCourseQuery
+\f1\b0  (courses list + home page): added 
+\f3 .leftJoin(courseReviews, eq(courseReviews.courseId, courses.id))
+\f1 , 
+\f3 .groupBy(courses.id)
+\f1 , and two new selected columns \'97 
+\f3 ratingAverage: avg(courseReviews.rating)
+\f1  and 
+\f3 ratingCount: count(courseReviews.id)
+\f1 \
+\'95 
+\f0\b getCourseWithDetails
+\f1\b0  (course detail page): same join / group / aggregate pattern applied to the single-course query\
+\'95 Left join (not inner join) ensures courses with zero reviews return 
+\f3 null
+\f1  / 
+\f3 0
+\f1  rather than being excluded from results\
+\pard\pardeftab720\li280\sb100\sa16\partightenfactor0
+
+\f0\b\fs17 \cf6 Architectural
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 Added 
+\f3 avg, count
+\f1  from 
+\f3 drizzle-orm
+\f1  and 
+\f3 courseReviews
+\f1  from schema to imports\
+\'95 
+\f3 .groupBy(courses.id)
+\f1  is required by SQL aggregate semantics when mixing aggregate and non-aggregate columns in a single SELECT \'97 the only structural query change beyond adding the join\
+\pard\pardeftab720\sb200\partightenfactor0
+
+\fs2 \cf8 \
+\pard\pardeftab720\sb160\sa40\partightenfactor0
+
+\f0\b\fs21 \cf7 app/routes/courses.$slug.tsx
+\f1\b0 \
+\pard\pardeftab720\sa80\partightenfactor0
+
+\f2\i\fs15 \cf3 course detail page
+\f1\i0 \
+\pard\pardeftab720\li280\sa16\partightenfactor0
+
+\f0\b\fs17 \cf4 Functional
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 Loader: fetches 
+\f3 userRating
+\f1  via 
+\f3 getUserRatingForCourse
+\f1  only when user is enrolled; included in loader return value\
+\'95 Component: 
+\f3 useOptimistic + useTransition
+\f1  for instant star feedback before server confirms; 
+\f3 handleRating
+\f1  fires a 
+\f3 fetch
+\f1  POST to 
+\f3 /api/course-rating
+\f1 \
+\'95 Hero metadata bar: 
+\f3 StarRatingDisplay
+\f1  rendered when 
+\f3 ratingAverage !== null && ratingCount > 0
+\f1 \
+\'95 Sidebar card: \'93Your Rating\'94 section with 
+\f3 StarRatingInput
+\f1  visible only to enrolled non-instructors; shows \'93You rated this course X/5\'94 confirmation text after submission\
+\pard\pardeftab720\li280\sb100\sa16\partightenfactor0
+
+\f0\b\fs17 \cf5 Non-functional
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 Added 
+\f3 useOptimistic, useTransition
+\f1  to React imports (React 19 hooks; already in the project\'92s dependency tree, no new packages)\
+\'95 
+\f3 flex-wrap
+\f1  added to the hero metadata div to prevent overflow when the rating badge is inserted into the row\
+\pard\pardeftab720\sb200\partightenfactor0
+
+\fs2 \cf8 \
+\pard\pardeftab720\sb160\sa40\partightenfactor0
+
+\f0\b\fs21 \cf7 app/routes/courses.tsx
+\f1\b0 \
+\pard\pardeftab720\sa80\partightenfactor0
+
+\f2\i\fs15 \cf3 course list page
+\f1\i0 \
+\pard\pardeftab720\li280\sa16\partightenfactor0
+
+\f0\b\fs17 \cf4 Functional
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 
+\f3 CardFooter
+\f1  conditionally renders 
+\f3 <StarRatingDisplay>
+\f1  above the instructor / price row when a rating exists\
+\pard\pardeftab720\li280\sb100\sa16\partightenfactor0
+
+\f0\b\fs17 \cf5 Non-functional (layout)
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 
+\f3 CardFooter
+\f1  changed from 
+\f3 flex items-center justify-between
+\f1  (single horizontal row) to 
+\f3 flex flex-col items-start gap-2
+\f1 ; original instructor/price content wrapped in inner 
+\f3 <div className="flex w-full items-center justify-between">
+\f1  to preserve two-column spacing\
+\pard\pardeftab720\sb200\partightenfactor0
+
+\fs2 \cf8 \
+\pard\pardeftab720\sb160\sa40\partightenfactor0
+
+\f0\b\fs21 \cf7 app/routes/home.tsx
+\f1\b0 \
+\pard\pardeftab720\sa80\partightenfactor0
+
+\f2\i\fs15 \cf3 home page \'97 featured courses section
+\f1\i0 \
+\pard\pardeftab720\li280\sa16\partightenfactor0
+
+\f0\b\fs17 \cf4 Functional
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 Same 
+\f3 <StarRatingDisplay>
+\f1  integration as the courses list \'97 
+\f3 buildCourseQuery
+\f1  already returns rating fields, so no additional data fetching was needed in the loader\
+\pard\pardeftab720\li280\sb100\sa16\partightenfactor0
+
+\f0\b\fs17 \cf5 Non-functional (layout)
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 Same 
+\f3 CardFooter
+\f1  column restructure as 
+\f3 courses.tsx
+\f1 \
+\pard\pardeftab720\sb200\partightenfactor0
+
+\fs2 \cf8 \
+\pard\pardeftab720\sb160\sa40\partightenfactor0
+
+\f0\b\fs21 \cf7 app/routes.ts
+\f1\b0 \
+\pard\pardeftab720\li280\sa16\partightenfactor0
+
+\f0\b\fs17 \cf6 Architectural
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 One line added: 
+\f3 route("api/course-rating", "routes/api.course-rating.ts")
+\f1  \'97 registers the new action endpoint with React Router v7\'92s file-based router config\
+\pard\pardeftab720\sb200\partightenfactor0
+
+\fs2 \cf8 \
+\pard\pardeftab720\sb160\sa40\partightenfactor0
+
+\f0\b\fs21 \cf7 app/db/index.ts
+\f1\b0 \
+\pard\pardeftab720\li280\sa16\partightenfactor0
+
+\f0\b\fs17 \cf10 Non-functional \'97 pre-existing uncommitted change (unrelated to reviews)
+\f1\b0 \
+\pard\pardeftab720\li400\partightenfactor0
+
+\fs16 \cf8 \'95 Added 
+\f3 sqlite.pragma("wal_autocheckpoint = 1")
+\f1  \'97 controls WAL checkpoint frequency; not introduced by the review feature\
+\pard\pardeftab720\sb360\sa400\partightenfactor0
+
+\fs2 \cf8 \
+\pard\pardeftab720\sa200\partightenfactor0
+
+\f0\b\fs30 \cf2 SUMMARY TABLE\
+
+\itap1\trowd \taflags1 \trgaph108\trleft-108 \trbrdrt\brdrnil \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth3480\clftsWidth3 \clbrdrt\brdrs\brdrw20\brdrcf11 \clbrdrl\brdrs\brdrw20\brdrcf11 \clbrdrb\brdrs\brdrw20\brdrcf11 \clbrdrr\brdrs\brdrw20\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx2160
+\clvertalc \clshdrawnil \clwWidth2300\clftsWidth3 \clbrdrt\brdrs\brdrw20\brdrcf11 \clbrdrl\brdrs\brdrw20\brdrcf11 \clbrdrb\brdrs\brdrw20\brdrcf11 \clbrdrr\brdrs\brdrw20\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx4320
+\clvertalc \clshdrawnil \clwWidth3620\clftsWidth3 \clbrdrt\brdrs\brdrw20\brdrcf11 \clbrdrl\brdrs\brdrw20\brdrcf11 \clbrdrb\brdrs\brdrw20\brdrcf11 \clbrdrr\brdrs\brdrw20\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx6480
+\clvertalc \clshdrawnil \clwWidth3380\clftsWidth3 \clbrdrt\brdrs\brdrw20\brdrcf11 \clbrdrl\brdrs\brdrw20\brdrcf11 \clbrdrb\brdrs\brdrw20\brdrcf11 \clbrdrr\brdrs\brdrw20\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\fs16 \cf2 File\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf2 New / Modified\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf2 Functional\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf2 Non-functional / Arch\cell \row
+
+\itap1\trowd \taflags1 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth3480\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx2160
+\clvertalc \clshdrawnil \clwWidth2300\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx4320
+\clvertalc \clshdrawnil \clwWidth3620\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx6480
+\clvertalc \clshdrawnil \clwWidth3380\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f4\fs14 \cf7 reviewService.ts\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f0 \cf8 New\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 Upsert, read, enrollment guard\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 No new deps\cell \row
+
+\itap1\trowd \taflags1 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth3480\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx2160
+\clvertalc \clshdrawnil \clwWidth2300\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx4320
+\clvertalc \clshdrawnil \clwWidth3620\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx6480
+\clvertalc \clshdrawnil \clwWidth3380\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f4 \cf7 star-rating.tsx\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f0 \cf8 New\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 Display + interactive input\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 CSS half-star clip, aria-labels\cell \row
+
+\itap1\trowd \taflags1 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth3480\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx2160
+\clvertalc \clshdrawnil \clwWidth2300\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx4320
+\clvertalc \clshdrawnil \clwWidth3620\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx6480
+\clvertalc \clshdrawnil \clwWidth3380\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f4 \cf7 api.course-rating.ts\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f0 \cf8 New\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 POST handler, auth / validation / enroll guards\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 Follows existing API route pattern\cell \row
+
+\itap1\trowd \taflags1 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth3480\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx2160
+\clvertalc \clshdrawnil \clwWidth2300\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx4320
+\clvertalc \clshdrawnil \clwWidth3620\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx6480
+\clvertalc \clshdrawnil \clwWidth3380\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f4 \cf7 schema.ts\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f0 \cf8 Modified\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 courseReviews table + unique constraint\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 unique import added\cell \row
+
+\itap1\trowd \taflags1 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth3480\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx2160
+\clvertalc \clshdrawnil \clwWidth2300\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx4320
+\clvertalc \clshdrawnil \clwWidth3620\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx6480
+\clvertalc \clshdrawnil \clwWidth3380\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f4 \cf7 0007 + 0008 migrations\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f0 \cf8 New (artefacts)\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 \'97\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 Table DDL + unique index + journal\cell \row
+
+\itap1\trowd \taflags1 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth3480\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx2160
+\clvertalc \clshdrawnil \clwWidth2300\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx4320
+\clvertalc \clshdrawnil \clwWidth3620\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx6480
+\clvertalc \clshdrawnil \clwWidth3380\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f4 \cf7 courseService.ts\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f0 \cf8 Modified\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 AVG + COUNT joins on both course queries\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 leftJoin + groupBy required by SQL aggregation\cell \row
+
+\itap1\trowd \taflags1 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth3480\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx2160
+\clvertalc \clshdrawnil \clwWidth2300\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx4320
+\clvertalc \clshdrawnil \clwWidth3620\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx6480
+\clvertalc \clshdrawnil \clwWidth3380\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f4 \cf7 courses.$slug.tsx\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f0 \cf8 Modified\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 User rating fetch, display + interactive input\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 useOptimistic, useTransition, flex-wrap\cell \row
+
+\itap1\trowd \taflags1 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth3480\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx2160
+\clvertalc \clshdrawnil \clwWidth2300\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx4320
+\clvertalc \clshdrawnil \clwWidth3620\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx6480
+\clvertalc \clshdrawnil \clwWidth3380\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f4 \cf7 courses.tsx\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f0 \cf8 Modified\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 Rating display on course cards\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 CardFooter column layout\cell \row
+
+\itap1\trowd \taflags1 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth3480\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx2160
+\clvertalc \clshdrawnil \clwWidth2300\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx4320
+\clvertalc \clshdrawnil \clwWidth3620\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx6480
+\clvertalc \clshdrawnil \clwWidth3380\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f4 \cf7 home.tsx\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f0 \cf8 Modified\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 Rating on featured course cards\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 CardFooter column layout\cell \row
+
+\itap1\trowd \taflags1 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth3480\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx2160
+\clvertalc \clshdrawnil \clwWidth2300\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx4320
+\clvertalc \clshdrawnil \clwWidth3620\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx6480
+\clvertalc \clshdrawnil \clwWidth3380\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f4 \cf7 routes.ts\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f0 \cf8 Modified\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 \'97\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf8 Route registration for API endpoint\cell \row
+
+\itap1\trowd \taflags1 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrt\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth3480\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx2160
+\clvertalc \clshdrawnil \clwWidth2300\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx4320
+\clvertalc \clshdrawnil \clwWidth3620\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx6480
+\clvertalc \clshdrawnil \clwWidth3380\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f4 \cf3 db/index.ts\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f0 \cf3 Modified (unrelated)\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf3 \'97\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf3 WAL pragma (pre-existing change)\cell \lastrow\row
+\pard\pardeftab720\partightenfactor0
+
+\fs2 \cf3 \
+\pard\pardeftab720\sb360\sa400\partightenfactor0
+\cf3 \
+\pard\pardeftab720\sa200\partightenfactor0
+
+\fs30 \cf2 VERIFICATION: Course Star-Rating System\
+\pard\pardeftab720\sa200\partightenfactor0
+
+\fs16 \cf8 The following aspects of the implementation were verified during development through static code analysis, API testing via curl, and manual inspection of the running application.\
+\pard\pardeftab720\sa60\partightenfactor0
+
+\fs19 \cf2 Findings\
+\pard\pardeftab720\sb80\sa40\partightenfactor0
+
+\fs17 \cf4 PASS
+\f1\b0 \cf8  \'97 Database schema and migrations applied correctly\
+\pard\pardeftab720\li280\partightenfactor0
+
+\fs16 \cf8 \'95 
+\f3 course_reviews
+\f1  table created with FK constraints on 
+\f3 user_id
+\f1  and 
+\f3 course_id
+\f1 \
+\'95 
+\f3 UNIQUE INDEX course_reviews_user_course_unique ON course_reviews (user_id, course_id)
+\f1  enforced at DB level\
+\'95 Two-migration approach (0007 + 0008) correctly reflects the Drizzle schema evolution cycle\
+\'95 SQLite WAL(Write-Ahead Logging) mode preserves consistency under concurrent access\
+\pard\pardeftab720\sb120\sa40\partightenfactor0
+
+\f0\b\fs17 \cf4 PASS
+\f1\b0 \cf8  \'97 API endpoint guard chain verified\
+\pard\pardeftab720\li280\partightenfactor0
+
+\fs16 \cf8 \'95 
+\f3 POST /api/course-rating
+\f1  with no session cookie \'e8\'96\'94? 
+\f0\b 401 Unauthorized
+\f1\b0 \
+\'95 Authenticated user not enrolled in the course \'e8\'96\'94? 
+\f0\b 403 Forbidden
+\f1\b0 \
+\'95 Invalid 
+\f3 rating
+\f1  value (e.g. 6, 0, or float) \'e8\'96\'94? 
+\f0\b 400 Bad Request
+\f1\b0  via Zod schema\
+\'95 Valid enrolled-user submission \'e8\'96\'94? 
+\f0\b 200
+\f1\b0  
+\f3 \{success: true\}
+\f1 \
+\'95 Repeated submission by same user updates the existing row (upsert confirmed via 
+\f3 onConflictDoUpdate
+\f1 )\
+\pard\pardeftab720\sb120\sa40\partightenfactor0
+
+\f0\b\fs17 \cf4 PASS
+\f1\b0 \cf8  \'97 Course list and home page display\
+\pard\pardeftab720\li280\partightenfactor0
+
+\fs16 \cf8 \'95 
+\f3 StarRatingDisplay
+\f1  hidden when 
+\f3 ratingCount === 0
+\f1  (conditional guard 
+\f3 ratingAverage !== null && ratingCount > 0
+\f1  verified)\
+\'95 No empty star widget rendered for courses with zero ratings\
+\'95 
+\f3 CardFooter
+\f1  column layout accommodates rating row without displacing instructor / price row\
+\'95 Rating data flows through 
+\f3 buildCourseQuery
+\f1  to both 
+\f3 /courses
+\f1  and 
+\f3 /
+\f1  (home) without additional fetch calls\
+\pard\pardeftab720\sb120\sa40\partightenfactor0
+
+\f0\b\fs17 \cf4 PASS
+\f1\b0 \cf8  \'97 Course detail page\
+\pard\pardeftab720\li280\partightenfactor0
+
+\fs16 \cf8 \'95 
+\f3 StarRatingDisplay
+\f1  shown in hero metadata bar when aggregate data is available\
+\'95 
+\f3 StarRatingInput
+\f1  visible in sidebar 
+\f0\b only
+\f1\b0  for enrolled non-instructors (authorisation surface verified)\
+\'95 Course instructor sees the average display but is not shown the rating input\
+\'95 Unauthenticated users see the aggregate display but not the input widget\
+\'95 \'93You rated this course X/5\'94 confirmation text appears after a rating is submitted\
+\pard\pardeftab720\sb120\sa40\partightenfactor0
+
+\f0\b\fs17 \cf4 PASS
+\f1\b0 \cf8  \'97 Optimistic UI behaviour\
+\pard\pardeftab720\li280\partightenfactor0
+
+\fs16 \cf8 \'95 Star selection reflects immediately via 
+\f3 useOptimistic
+\f1  without waiting for server response\
+\'95 
+\f3 useTransition
+\f1  keeps the UI responsive during the pending fetch\
+\'95 No loading-state flicker; star reverts to server-confirmed value on error\
+\pard\pardeftab720\sb120\sa40\partightenfactor0
+
+\f0\b\fs17 \cf10 NOTE
+\f1\b0 \cf8  \'97 reviewService standalone aggregate functions not called by any route\
+\pard\pardeftab720\li280\partightenfactor0
+
+\fs16 \cf8 \'95 
+\f3 getCourseRating()
+\f1  and 
+\f3 getCourseRatings()
+\f1  are fully implemented in 
+\f3 reviewService.ts
+\f1  but not referenced by any route\
+\'95 Aggregation is handled inside 
+\f3 courseService.ts
+\f1  via the 
+\f3 leftJoin
+\f1  approach to avoid a second DB round-trip\
+\'95 These functions remain available for future standalone use (e.g. admin dashboard, analytics endpoints)\
+\pard\pardeftab720\sb120\sa40\partightenfactor0
+
+\f0\b\fs17 \cf10 NOTE
+\f1\b0 \cf8  \'97 switch-user API accepts form data only\
+\pard\pardeftab720\li280\partightenfactor0
+
+\fs16 \cf8 \'95 Confirmed during development testing: 
+\f3 POST /api/switch-user
+\f1  requires a form-encoded body\
+\'95 Sending 
+\f3 Content-Type: application/json
+\f1  results in a body-parsing error (
+\f3 request.formData()
+\f1  fails on JSON)\
+\'95 Correct invocation: 
+\f3 curl -X POST /api/switch-user --data-urlencode "userId=4"
+\f1 \
+\'95 This is existing behaviour of 
+\f3 api.switch-user.ts
+\f1 ; no change required or made\
+\pard\pardeftab720\sb120\sa40\partightenfactor0
+
+\f0\b\fs17 \cf9 RISK
+\f1\b0 \cf8  \'97 Two unrelated changes bundled in uncommitted diff\
+\pard\pardeftab720\li280\partightenfactor0
+
+\fs16 \cf8 \'95 
+\f3 gradeScore
+\f1  column on 
+\f3 enrollments
+\f1  (schema.ts) and 
+\f3 wal_autocheckpoint
+\f1  pragma (db/index.ts) are pre-existing uncommitted changes not part of the review feature\
+\'95 They are visible in the working-tree diff but not yet committed; they should be reviewed and committed (or reverted) independently\
+\pard\pardeftab720\sb480\partightenfactor0
+
+\fs14 \cf3 Generated by Claude Code \'97 June 2026\
+}

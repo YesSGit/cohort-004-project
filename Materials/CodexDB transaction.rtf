@@ -1,0 +1,94 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 Transaction (inserts all test records):\
+\
+  BEGIN TRANSACTION;\
+\
+  -- 1. New student\
+  INSERT INTO users (name, email, role, created_at)\
+  VALUES ('Lena Kovacs', 'lena.kovacs@student.dev', 'student', datetime('now'));\
+\
+  -- 2. New category\
+  INSERT INTO categories (name, slug)\
+  VALUES ('Cloud Computing', 'cloud-computing');\
+\
+  -- 3. New course (instructor id=2: sarah.chen, new category)\
+  INSERT INTO courses (title, slug, description, instructor_id, category_id, status, price, ppp_enabled, created_at, updated_at)\
+  VALUES (\
+    'AWS Fundamentals',\
+    'aws-fundamentals',\
+    'Learn the core services and architecture of Amazon Web Services.',\
+    2,\
+    last_insert_rowid(),\
+    'published',\
+    4900,\
+    1,\
+    datetime('now'),\
+    datetime('now')\
+  );\
+\
+  INSERT INTO modules (course_id, title, position, created_at)\
+  VALUES (last_insert_rowid(), 'Getting Started with AWS', 1, datetime('now'));\
+  \
+  -- 5. New lesson for that module\
+  INSERT INTO lessons (module_id, title, content, position, duration_minutes, created_at)\
+  VALUES (\
+    last_insert_rowid(),\
+    'Setting Up Your AWS Account',\
+    'Step-by-step guide to creating and securing your first AWS account.',\
+    1,\
+    15,\
+    datetime('now')\
+  );\
+  \
+  -- 6. Enrollment with grade_score\
+  INSERT INTO enrollments (user_id, course_id, enrolled_at, grade_score)\
+  VALUES (\
+    (SELECT id FROM users WHERE email = 'lena.kovacs@student.dev'),\
+    (SELECT id FROM courses WHERE slug = 'aws-fundamentals'),\
+    datetime('now'),\
+    88.5\
+  );\
+\
+  COMMIT;\
+\
+\'97\
+  Force WAL checkpoint after (flush to data.db):\
+  PRAGMA wal_checkpoint(TRUNCATE);\
+  \
+  To run them via CLI:\
+  sqlite3 data.db < your_script.sql\
+  # or inline as used above:\
+  sqlite3 data.db "PRAGMA wal_checkpoint(TRUNCATE);"\
+\
+\'97\
+\uc0\u10095  add the checkpoint-on-close pragma and re-insert the test data                                                                      \
+\
+\uc0\u9210  Update(app/db/index.ts)\
+  \uc0\u9151   Added 1 line\
+       4  \
+       5  const sqlite = new Database("data.db");\
+       6  sqlite.pragma("journal_mode = WAL");\
+       7 +sqlite.pragma("wal_autocheckpoint = 1");                                                                             \
+       8  sqlite.pragma("foreign_keys = ON");\
+       9  \
+      10  export const db = drizzle(sqlite, \{ schema \});\
+\
+\uc0\u9210  Now re-insert the test data and force a checkpoint immediately after:\
+\
+\uc0\u9210  Bash(sqlite3 /Users/yess/Documents/Dev/ai-hero-dev/cohort-004-project/data.db <<'EOF'\
+      BEGIN TRANSACTION;\'85)\
+  \uc0\u9151   0|0|0\
+\
+\uc0\u9210  0|0|0 means the checkpoint ran clean \'97 nothing left in WAL. Let me verify the data and copy to Visual DB:\
+\
+\uc0\u9210  Bash(sqlite3 /Users/yess/Documents/Dev/ai-hero-dev/cohort-004-project/data.db "SELECT e.id, u.name, c.title, e.enrolled_at,\
+      e.grade_score FROM enrollments e JOIN use\'85)\
+  \uc0\u9151   8|Lena Kovacs|AWS Fundamentals|2026-06-03 10:27:43|88.5\
+\
+}
