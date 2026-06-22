@@ -1,4 +1,4 @@
-import { eq, like, and, or, sql } from "drizzle-orm";
+import { eq, like, and, or, sql, avg, count } from "drizzle-orm";
 import { db } from "~/db";
 import {
   courses,
@@ -6,6 +6,7 @@ import {
   users,
   modules,
   lessons,
+  courseReviews,
   CourseStatus,
 } from "~/db/schema";
 
@@ -88,10 +89,14 @@ export function buildCourseQuery(
       instructorName: users.name,
       instructorAvatarUrl: users.avatarUrl,
       categoryName: categories.name,
+      ratingAverage: avg(courseReviews.rating),
+      ratingCount: count(courseReviews.id),
     })
     .from(courses)
     .innerJoin(users, eq(courses.instructorId, users.id))
-    .innerJoin(categories, eq(courses.categoryId, categories.id));
+    .innerJoin(categories, eq(courses.categoryId, categories.id))
+    .leftJoin(courseReviews, eq(courseReviews.courseId, courses.id))
+    .groupBy(courses.id);
 
   if (category) {
     conditions.push(eq(categories.slug, category));
@@ -130,11 +135,15 @@ export function getCourseWithDetails(id: number) {
       instructorAvatarUrl: users.avatarUrl,
       instructorBio: users.bio,
       categoryName: categories.name,
+      ratingAverage: avg(courseReviews.rating),
+      ratingCount: count(courseReviews.id),
     })
     .from(courses)
     .innerJoin(users, eq(courses.instructorId, users.id))
     .innerJoin(categories, eq(courses.categoryId, categories.id))
+    .leftJoin(courseReviews, eq(courseReviews.courseId, courses.id))
     .where(eq(courses.id, id))
+    .groupBy(courses.id)
     .get();
 
   if (!course) return null;

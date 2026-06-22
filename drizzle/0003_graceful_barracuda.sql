@@ -1,0 +1,1 @@
+ALTER TABLE `enrollments` ADD `grade_score` real;
