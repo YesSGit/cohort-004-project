@@ -1,6 +1,8 @@
 .DS_Store
 .env
 /node_modules/
+COMMIT_EDITMSG
+.claude/COMMIT_EDITMSG
 
 # React Router
 /.react-router/
@@ -13,6 +15,7 @@
 .pnpm-store
 *.db-shm
 .claude/settings.local.json
+*.local
 
 # JetBrains
 /.idea/
