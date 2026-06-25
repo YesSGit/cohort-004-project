@@ -346,21 +346,31 @@
 \f1  via 
 \f3 getUserRatingForCourse
 \f1  only when user is enrolled; included in loader return value\
-\'95 Component: 
-\f3 useOptimistic + useTransition
-\f1  for instant star feedback before server confirms; 
+\'95 Component:
 \f3 handleRating
-\f1  fires a 
+\f1  fires a
 \f3 fetch
-\f1  POST to 
+\f1  POST to
 \f3 /api/course-rating
+\f1 ; updates
+\f3 localRating
+\f1  synchronously before the response arrives; on success shows
+\f3 toast.success
+\f1 , on failure reverts state and shows
+\f3 toast.error
 \f1 \
-\'95 Hero metadata bar: 
+\'95 Hero metadata bar:
 \f3 StarRatingDisplay
-\f1  rendered when 
-\f3 ratingAverage !== null && ratingCount > 0
-\f1 \
-\'95 Sidebar card: \'93Your Rating\'94 section with 
+\f1  driven by
+\f3 displayAverage
+\f1  /
+\f3 displayCount
+\f1  local state; recalculates optimistically on submit (first rating: new average
+\f3 = (avg * count + rating) / (count + 1)
+\f1 ; update:
+\f3 = (avg * count - prev + rating) / count
+\f1 ) so the displayed aggregate refreshes without a page reload\
+\'95 Sidebar card: \'93Your Rating\'94 section with
 \f3 StarRatingInput
 \f1  visible only to enrolled non-instructors; shows \'93You rated this course X/5\'94 confirmation text after submission\
 \pard\pardeftab720\li280\sb100\sa16\partightenfactor0
@@ -369,10 +379,27 @@
 \f1\b0 \
 \pard\pardeftab720\li400\partightenfactor0
 
-\fs16 \cf8 \'95 Added 
-\f3 useOptimistic, useTransition
-\f1  to React imports (React 19 hooks; already in the project\'92s dependency tree, no new packages)\
-\'95 
+\fs16 \cf8 \'95 Three
+\f3 useState
+\f1  variables own the client-side rating state:
+\f3 localRating
+\f1  (sidebar input),
+\f3 displayAverage
+\f1  /
+\f3 displayCount
+\f1  (hero display); two
+\f3 useEffect
+\f1  hooks keep them in sync when
+\f3 loaderData
+\f1  changes on soft navigation\
+\'95 Replaced
+\f3 useOptimistic + useTransition
+\f1  (React 19 Server Action pattern) with plain
+\f3 useState
+\f1  because those hooks revert to the canonical loader value when the transition ends \'97 which never re-runs after a plain
+\f3 fetch
+\f1 \
+\'95
 \f3 flex-wrap
 \f1  added to the hero metadata div to prevent overflow when the rating badge is inserted into the row\
 \pard\pardeftab720\sb200\partightenfactor0
@@ -607,9 +634,9 @@
 
 \f0 \cf8 Modified\cell 
 \pard\intbl\itap1\pardeftab720\partightenfactor0
-\cf8 User rating fetch, display + interactive input\cell 
+\cf8 User rating + live average update, toast feedback\cell
 \pard\intbl\itap1\pardeftab720\partightenfactor0
-\cf8 useOptimistic, useTransition, flex-wrap\cell \row
+\cf8 useState optimistic recalc, flex-wrap\cell \row
 
 \itap1\trowd \taflags1 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
 \clvertalc \clshdrawnil \clwWidth3480\clftsWidth3 \clbrdrt\brdrs\brdrw10\brdrcf11 \clbrdrl\brdrs\brdrw10\brdrcf11 \clbrdrb\brdrs\brdrw10\brdrcf11 \clbrdrr\brdrs\brdrw10\brdrcf11 \clpadl100 \clpadr100 \gaph\cellx2160
@@ -777,16 +804,32 @@
 \pard\pardeftab720\sb120\sa40\partightenfactor0
 
 \f0\b\fs17 \cf4 PASS
-\f1\b0 \cf8  \'97 Optimistic UI behaviour\
+\f1\b0 \cf8  \'97 Optimistic UI behaviour (updated fix, June 2026)\
 \pard\pardeftab720\li280\partightenfactor0
 
-\fs16 \cf8 \'95 Star selection reflects immediately via 
+\fs16 \cf8 \'95 Sidebar star input updates synchronously via
+\f3 localRating
+\f1  state \'97 no wait for server response\
+\'95 Hero aggregate (average + count) recalculates immediately via
+\f3 displayAverage
+\f1  /
+\f3 displayCount
+\f1  state; formula accounts for first-time ratings (count +1) vs. rating updates (count unchanged)\
+\'95 On server error both sidebar and hero state revert to their pre-click values; a
+\f3 toast.error
+\f1  informs the user\
+\'95 On success a
+\f3 toast.success
+\f1  (\'93You rated this course X/5 stars\'94) confirms the saved rating\
+\'95
+\f0\b Root cause of original bug:
+\f1\b0
 \f3 useOptimistic
-\f1  without waiting for server response\
-\'95 
-\f3 useTransition
-\f1  keeps the UI responsive during the pending fetch\
-\'95 No loading-state flicker; star reverts to server-confirmed value on error\
+\f1  reverts to the source prop (
+\f3 userRating
+\f1  from the loader) when the transition ends; because a plain
+\f3 fetch
+\f1  never triggers a loader re-run, the canonical value never updates and the stars snapped back\
 \pard\pardeftab720\sb120\sa40\partightenfactor0
 
 \f0\b\fs17 \cf10 NOTE

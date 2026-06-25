@@ -1,4 +1,4 @@
-import { useEffect, useState, useOptimistic, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import type { Route } from "./+types/courses.$slug";
@@ -193,18 +193,68 @@ export default function CourseDetail({ loaderData }: Route.ComponentProps) {
   } = loaderData;
   const isInstructor = currentUserId === course.instructorId;
   const [searchParams, setSearchParams] = useSearchParams();
-  const [isPending, startTransition] = useTransition();
-  const [optimisticRating, setOptimisticRating] = useOptimistic(userRating);
+  const [localRating, setLocalRating] = useState<number | null>(userRating ?? null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [displayAverage, setDisplayAverage] = useState<number | null>(
+    course.ratingAverage !== null ? Number(course.ratingAverage) : null
+  );
+  const [displayCount, setDisplayCount] = useState(course.ratingCount);
+
+  useEffect(() => {
+    setLocalRating(userRating ?? null);
+  }, [userRating]);
+
+  useEffect(() => {
+    setDisplayAverage(course.ratingAverage !== null ? Number(course.ratingAverage) : null);
+    setDisplayCount(course.ratingCount);
+  }, [course.ratingAverage, course.ratingCount]);
 
   async function handleRating(rating: number) {
-    startTransition(async () => {
-      setOptimisticRating(rating);
-      await fetch("/api/course-rating", {
+    const previous = localRating;
+    const prevAverage = displayAverage;
+    const prevCount = displayCount;
+
+    // Optimistically recalculate average
+    let newAverage: number;
+    let newCount: number;
+    if (previous === null) {
+      newCount = displayCount + 1;
+      newAverage = displayAverage !== null
+        ? (displayAverage * displayCount + rating) / newCount
+        : rating;
+    } else {
+      newCount = displayCount;
+      newAverage = displayAverage !== null && displayCount > 0
+        ? (displayAverage * displayCount - previous + rating) / displayCount
+        : rating;
+    }
+
+    setLocalRating(rating);
+    setDisplayAverage(newAverage);
+    setDisplayCount(newCount);
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/course-rating", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ courseId: course.id, rating }),
       });
-    });
+      if (!res.ok) {
+        setLocalRating(previous);
+        setDisplayAverage(prevAverage);
+        setDisplayCount(prevCount);
+        toast.error("Failed to save rating. Please try again.");
+      } else {
+        toast.success(`You rated this course ${rating}/5 stars`);
+      }
+    } catch {
+      setLocalRating(previous);
+      setDisplayAverage(prevAverage);
+      setDisplayCount(prevCount);
+      toast.error("Failed to save rating. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   useEffect(() => {
@@ -342,10 +392,10 @@ export default function CourseDetail({ loaderData }: Route.ComponentProps) {
               {formatDuration(totalDuration, true, false, false)} total
             </span>
           )}
-          {course.ratingAverage !== null && course.ratingCount > 0 && (
+          {displayAverage !== null && displayCount > 0 && (
             <StarRatingDisplay
-              average={Math.round(Number(course.ratingAverage) * 10) / 10}
-              count={course.ratingCount}
+              average={Math.round(displayAverage * 10) / 10}
+              count={displayCount}
             />
           )}
         </div>
@@ -474,13 +524,13 @@ export default function CourseDetail({ loaderData }: Route.ComponentProps) {
                 <div className="border-t pt-4">
                   <p className="mb-2 text-sm font-medium">Your Rating</p>
                   <StarRatingInput
-                    value={optimisticRating}
+                    value={localRating}
                     onChange={handleRating}
-                    disabled={isPending}
+                    disabled={isSubmitting}
                   />
-                  {optimisticRating && (
+                  {localRating && (
                     <p className="mt-1 text-xs text-muted-foreground">
-                      You rated this course {optimisticRating}/5
+                      You rated this course {localRating}/5
                     </p>
                   )}
                 </div>
